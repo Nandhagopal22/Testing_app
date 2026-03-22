@@ -1,0 +1,33 @@
+pipeline {
+    agent any
+    stages {
+        stage('Checkout') {
+            steps { checkout scm }
+        }
+        stage('Restore') {
+            steps { bat 'dotnet restore src/MyApp/MyApp.csproj' }
+        }
+        stage('Build') {
+            steps { bat 'dotnet build src/MyApp/MyApp.csproj --configuration Release --no-restore' }
+        }
+        stage('Test') {
+            steps { bat 'dotnet test tests/MyApp.Tests/MyApp.Tests.csproj --no-restore --verbosity normal' }
+        }
+        stage('Docker Build') {
+            steps {
+                bat 'docker build -t mynandhagopalapp:latest .'
+            }
+        }
+        stage('Docker Deploy') {
+            steps {
+                bat 'docker stop mynandhagopalapp-container || exit 0'
+                bat 'docker rm mynandhagopalapp-container || exit 0'
+                bat 'docker run -d --name mynandhagopalapp-container -p 8080:80 mynandhagopalapp:latest'
+            }
+        }
+    }
+    post {
+        success { echo 'SUCCESS!' }
+        failure { echo 'FAILED!' }
+    }
+}
